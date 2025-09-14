@@ -5,20 +5,7 @@ import os
 import sys
 from math import ceil
 
-from utils import getenv_or_file
-
-# --- Chargement .env (sans dépendance externe) ---
-def load_env_file(path: str = ".env"):
-    if not os.path.isfile(path):
-        return
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if "=" in line:
-                k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip())
+from utils import getenv_or_file, load_env_file
 
 load_env_file()  # charge FULLENRICH_API_KEY si présent
 

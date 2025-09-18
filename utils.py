@@ -2,8 +2,9 @@ import os
 import glob
 import random
 import time
+from collections.abc import Iterable
 from shutil import which
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import parse_qs, urlparse, urlunparse, unquote, unquote_plus
 
 
 def load_env_file(path: str = ".env") -> None:
@@ -74,6 +75,56 @@ def normalize_linkedin_url(url: str | None) -> str | None:
         ("https", netloc, parsed.path, "", "", "")
     )
     return normalized
+
+
+def decode_duckduckgo_href(href: str | None) -> str | None:
+    """Return the resolved URL for a DuckDuckGo redirect *href*.
+
+    DuckDuckGo result links often redirect through ``duckduckgo.com/l/`` with an
+    ``uddg`` query parameter that contains the actual destination URL.
+    ``decode_duckduckgo_href`` extracts and decodes this parameter. If *href*
+    is already a direct URL, it is returned stripped of leading/trailing
+    whitespace. ``None`` is returned when *href* is not a string or is empty.
+    """
+
+    if not isinstance(href, str):
+        return None
+
+    candidate = href.strip()
+    if not candidate:
+        return None
+
+    parsed = urlparse(candidate)
+    netloc = parsed.netloc.lower()
+    if "duckduckgo.com" in netloc:
+        query = parse_qs(parsed.query)
+        uddg_values = query.get("uddg")
+        if uddg_values:
+            resolved = unquote_plus(uddg_values[0])
+            resolved = unquote(resolved)
+            return resolved
+    return candidate
+
+
+def find_first_linkedin_url(
+    hrefs: Iterable[str], expected_substring: str
+) -> str | None:
+    """Return the first normalized LinkedIn URL matching *expected_substring*.
+
+    The function iterates over *hrefs*, decodes potential DuckDuckGo redirect
+    links and returns the first URL whose lowercase form contains
+    *expected_substring* (also compared in lowercase). The resulting URL is
+    normalized via :func:`normalize_linkedin_url` before being returned.
+    """
+
+    expected_lower = expected_substring.lower()
+    for href in hrefs:
+        resolved = decode_duckduckgo_href(href)
+        if not resolved:
+            continue
+        if expected_lower in resolved.lower():
+            return normalize_linkedin_url(resolved)
+    return None
 
 
 def polite_delay(a: float = 0.6, b: float = 1.4) -> None:

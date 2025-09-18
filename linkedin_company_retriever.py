@@ -7,7 +7,11 @@ from selenium.webdriver.support import expected_conditions as EC
 import pandas as pd
 import sys
 
-from utils import find_chromedriver_binary, normalize_linkedin_url, polite_delay
+from utils import (
+    find_chromedriver_binary,
+    find_first_linkedin_url,
+    polite_delay,
+)
 
 INPUT_XLSX = "offres_jobup.xlsx"
 OUTPUT_XLSX = "offres_jobup_company_linkedin.xlsx"
@@ -28,13 +32,13 @@ def search_company_on_duckduckgo(company_name: str) -> str | None:
     driver = webdriver.Chrome(service=service, options=options)
     try:
         driver.get(search_url)
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a")))
-        links = driver.find_elements(By.CSS_SELECTOR, "a[href*='linkedin.com/company']")
-        for a in links:
-            href = a.get_attribute("href") or ""
-            if "linkedin.com/company" in href:
-                return normalize_linkedin_url(href)
-        return None
+        selector = "[data-testid='result-title-a'], a[href*='duckduckgo.com/l/?uddg=']"
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+        )
+        links = driver.find_elements(By.CSS_SELECTOR, selector)
+        hrefs = [(a.get_attribute("href") or "") for a in links]
+        return find_first_linkedin_url(hrefs, "linkedin.com/company")
     finally:
         driver.quit()
 

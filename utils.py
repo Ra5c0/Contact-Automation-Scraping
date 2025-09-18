@@ -6,6 +6,23 @@ from shutil import which
 from urllib.parse import urlparse, urlunparse
 
 
+def load_env_file(path: str = ".env") -> None:
+    """Load simple KEY=VALUE pairs from *path* into ``os.environ``.
+
+    Existing variables are preserved. Lines starting with ``#`` or without an
+    ``=`` are ignored.
+    """
+    if not os.path.isfile(path):
+        return
+    with open(path, "r", encoding="utf-8") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, val = line.split("=", 1)
+            os.environ.setdefault(key.strip(), val.strip())
+
+
 def find_chromedriver_binary() -> str | None:
     """Return path to chromedriver if found in common locations or PATH.
 
